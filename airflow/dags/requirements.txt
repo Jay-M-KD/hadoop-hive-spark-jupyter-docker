@@ -1,0 +1,108 @@
+# Core Airflow and Spark Dependencies
+apache-airflow==2.8.1
+apache-airflow-providers-apache-spark==4.4.0
+apache-airflow-providers-common-sql==1.10.0
+
+# PySpark - Main Spark Python API
+pyspark==3.5.0
+
+# Data Processing Libraries
+pandas==2.1.4
+numpy==1.24.3
+pyarrow==14.0.2              # For Parquet file format support
+fastparquet==2023.10.1       # Alternative Parquet engine
+
+# HTTP and API Libraries
+requests==2.31.0
+urllib3==2.0.7
+
+# JSON and Data Serialization
+jsonschema==4.20.0
+
+# File System and Path Operations
+pathlib2==2.3.7.post1
+fsspec==2023.12.2
+
+# Data Validation and Quality
+great-expectations==0.18.8   # Optional: Advanced data validation
+cerberus==1.3.5             # Schema validation
+
+# Database Connectivity (if needed for future extensions)
+SQLAlchemy==1.4.51
+psycopg2-binary==2.9.9      # PostgreSQL driver
+pymongo==4.6.1              # MongoDB driver (optional)
+
+# Cloud Storage Support (optional)
+s3fs==2023.12.2             # AWS S3 filesystem
+gcsfs==2023.12.2.post1      # Google Cloud Storage filesystem
+azure-storage-blob==12.19.0  # Azure Blob Storage
+
+# Monitoring and Logging
+prometheus-client==0.19.0    # Metrics collection
+structlog==23.2.0           # Structured logging
+
+# Configuration Management
+python-dotenv==1.0.0        # Environment variable management
+configparser==6.0.0
+
+# Date and Time Utilities
+python-dateutil==2.8.2
+pytz==2023.3.post1
+
+# Development and Testing Dependencies
+pytest==7.4.4
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+black==23.12.1              # Code formatting
+flake8==6.1.0               # Code linting
+mypy==1.8.0                 # Type checking
+
+# Jupyter Notebook Support (for development/debugging)
+jupyter==1.0.0
+notebook==7.0.6
+
+# Memory and Performance Optimization
+memory-profiler==0.61.0
+psutil==5.9.6
+
+# Cryptography and Security
+cryptography==41.0.8
+bcrypt==4.1.2
+
+# Additional Airflow Providers (commonly used)
+apache-airflow-providers-postgres==5.10.0
+apache-airflow-providers-mysql==5.5.0
+apache-airflow-providers-sqlite==3.7.0
+apache-airflow-providers-ftp==3.7.0
+apache-airflow-providers-sftp==4.8.0
+apache-airflow-providers-ssh==3.10.0
+apache-airflow-providers-docker==3.10.0
+apache-airflow-providers-kubernetes==8.0.0
+
+# Web Framework Dependencies (for custom Airflow plugins)
+flask==2.3.3
+werkzeug==2.3.7
+
+# XML Processing (for configuration files)
+lxml==4.9.4
+
+# Compression Libraries
+zstandard==0.22.0           # Fast compression
+lz4==4.3.2                  # Fast compression alternative
+
+# Optional: Machine Learning Libraries (if adding ML features)
+scikit-learn==1.3.2
+joblib==1.3.2
+
+# Optional: Visualization Libraries (for data profiling)
+matplotlib==3.8.2
+plotly==5.17.0
+
+# Version Pinning for Stability
+setuptools==69.0.3
+wheel==0.42.0
+pip==23.3.2
+
+# Development Tools
+pre-commit==3.6.0          # Git hooks for code quality
+bandit==1.7.5              # Security linting

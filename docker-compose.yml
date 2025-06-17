@@ -1,0 +1,225 @@
+services:
+  # Hadoop Namenode
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    restart: always
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    env_file:
+      - ./hadoop-namenode.env
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+      - ./datasets:/datasets
+    networks:
+      - bigdata_network
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9870/dfshealth.html"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Hadoop Datanodes
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode1
+    restart: always
+    depends_on:
+      namenode:
+        condition: service_healthy
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop-namenode.env
+    volumes:
+      - hadoop_datanode1:/hadoop/dfs/data
+    networks:
+      - bigdata_network
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode2
+    restart: always
+    depends_on:
+      namenode:
+        condition: service_healthy
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop-namenode.env
+    volumes:
+      - hadoop_datanode2:/hadoop/dfs/data
+    networks:
+      - bigdata_network
+
+  # Spark Master
+  spark-master:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: spark-master
+    restart: always
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_EXTRA_CLASSPATH=/opt/bitnami/spark/jars/hudi-spark3-bundle_2.12-0.14.0.jar
+    volumes:
+      - ./datasets:/opt/bitnami/spark/datasets
+      - ./hadoop.env:/opt/bitnami/spark/conf/hadoop-env.sh
+    networks:
+      - bigdata_network
+
+  # Spark Workers
+  spark-worker1:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: spark-worker1
+    restart: always
+    depends_on:
+      - spark-master
+      - namenode
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=6G
+      - SPARK_WORKER_CORES=6
+      - SPARK_CONF_DIR=/opt/bitnami/spark/conf
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_WORKER_CLEANUP_ENABLED=true
+      - SPARK_SHUFFLE_SERVICE_ENABLED=true
+      - HADOOP_CONF_DIR=/opt/bitnami/spark/conf
+      - SPARK_EXTRA_CLASSPATH=/opt/bitnami/spark/jars/hudi-spark3-bundle_2.12-0.14.0.jar
+    volumes:
+      - ./hadoop.env:/opt/bitnami/spark/conf/hadoop-env.sh
+      - ./datasets:/opt/bitnami/spark/datasets
+    networks:
+      - bigdata_network
+
+  spark-worker2:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: spark-worker2
+    restart: always
+    depends_on:
+      - spark-master
+      - namenode
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=6G
+      - SPARK_WORKER_CORES=6
+      - SPARK_CONF_DIR=/opt/bitnami/spark/conf
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_WORKER_CLEANUP_ENABLED=true
+      - SPARK_SHUFFLE_SERVICE_ENABLED=true
+      - HADOOP_CONF_DIR=/opt/bitnami/spark/conf
+      - SPARK_EXTRA_CLASSPATH=/opt/bitnami/spark/jars/hudi-spark3-bundle_2.12-0.14.0.jar
+    volumes:
+      - ./hadoop.env:/opt/bitnami/spark/conf/hadoop-env.sh
+      - ./datasets:/opt/bitnami/spark/datasets
+    networks:
+      - bigdata_network
+
+  # PostgreSQL for Hive Metastore
+  postgres:
+    build: ./postgres
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: hive
+      POSTGRES_DB: metastore
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - bigdata_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hive -d metastore"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Hive
+  hive:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: hive
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      namenode:
+        condition: service_healthy
+    environment:
+      - HIVE_SITE_CONF_javax_jdo_option_ConnectionURL=jdbc:postgresql://postgres:5432/metastore
+      - HIVE_SITE_CONF_javax_jdo_option_ConnectionDriverName=org.postgresql.Driver
+      - HIVE_SITE_CONF_javax_jdo_option_ConnectionUserName=hive
+      - HIVE_SITE_CONF_javax_jdo_option_ConnectionPassword=hive
+      - HIVE_SITE_CONF_datanucleus_autoCreateSchema=false
+      - HIVE_SITE_CONF_hive_metastore_schema_verification=false
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - SERVICE_PRECONDITION=namenode:9000 postgres:5432
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    networks:
+      - bigdata_network
+
+  # Jupyter Notebook
+  jupyter:
+    build:
+      context: ./jupyter
+      dockerfile: Dockerfile
+    container_name: jupyter
+    restart: always
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+    volumes:
+      - ./jupyter:/home/jovyan/work
+      - ./datasets:/home/jovyan/datasets
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_DRIVER_MEMORY=2G
+      - SPARK_EXECUTOR_MEMORY=2G
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    depends_on:
+      - spark-master
+      - namenode
+    networks:
+      - bigdata_network
+
+networks:
+  bigdata_network:
+    driver: bridge
+
+volumes:
+  hadoop_namenode:
+  hadoop_datanode1:
+  hadoop_datanode2: 
+  pg_data:
